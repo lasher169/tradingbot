@@ -2,8 +2,13 @@ import concurrent.futures
 import pandas_ta as ta
 import yfinance as yf
 import requests
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+import os
+from contextlib import redirect_stdout
 
 tickers = []  # Add your list of tickers
+
 
 def process_tickers(data):
     tickers = []
@@ -44,7 +49,9 @@ if nasdaq_data:
     print(nasdaq_data)
 
 def get_stock_data(ticker):
-    df = yf.download(ticker, period="3mo", interval="1d")
+    current_date = datetime.today()
+    df = yf.download(ticker, period="3mo", interval="1d", start = current_date - relativedelta(months=4), end=current_date)
+
     return df
 
 def calculate_ema(df, length=30):
@@ -57,11 +64,13 @@ def is_upward_ema(df, length=30):
 
 upward_trending_stocks = []
 def calc_ema(ticker):
+    print("working on", ticker)
     df = get_stock_data(ticker)
     df = calculate_ema(df)
     if is_upward_ema(df):
         print("adding ",ticker)
         upward_trending_stocks.append(ticker)
+    print("completed", ticker)
 
 # Example usage
 
