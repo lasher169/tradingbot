@@ -74,36 +74,40 @@ def latest_crossover_direction(short_ema, long_ema, sustain_period=5):
         bool: True if the latest crossover is an upward trend, False otherwise.
     """
     # Identify crossover points
-    golden_cross = (short_ema > long_ema) & (short_ema.shift(1) <= long_ema.shift(1))
-    death_cross = (short_ema < long_ema) & (short_ema.shift(1) >= long_ema.shift(1))
 
-    # Combine crossover points
-    crossover_points = golden_cross | death_cross
+    try:
+        golden_cross = (short_ema > long_ema) & (short_ema.shift(1) <= long_ema.shift(1))
+        death_cross = (short_ema < long_ema) & (short_ema.shift(1) >= long_ema.shift(1))
 
-    # Filter out rows where crossovers occur
-    crossover_dates = crossover_points[crossover_points].index
+        # Combine crossover points
+        crossover_points = golden_cross | death_cross
 
-    # If there are no crossovers, return False
-    if len(crossover_dates) == 0:
-        return False
+        # Filter out rows where crossovers occur
+        crossover_dates = crossover_points[crossover_points].index
 
-    # Get the latest crossover date
-    latest_crossover_date = crossover_dates[-1]
+        # If there are no crossovers, return False
+        if len(crossover_dates) == 0:
+            return False
 
-    # Check if the latest crossover is a Golden Cross
-    if not golden_cross[latest_crossover_date]:
-        return False
+        # Get the latest crossover date
+        latest_crossover_date = crossover_dates[-1]
 
-    # Ensure the short EMA has been above the long EMA for at least `sustain_period` days
-    start_check_date = latest_crossover_date + pd.Timedelta(days=1)
-    end_check_date = start_check_date + pd.Timedelta(days=sustain_period - 1)
+        # Check if the latest crossover is a Golden Cross
+        if not golden_cross[latest_crossover_date]:
+            return False
 
-    if end_check_date > short_ema.index[-1]:
-        return False
+        # Ensure the short EMA has been above the long EMA for at least `sustain_period` days
+        start_check_date = latest_crossover_date + pd.Timedelta(days=1)
+        end_check_date = start_check_date + pd.Timedelta(days=sustain_period - 1)
 
-    sustained = all(short_ema.loc[start_check_date:end_check_date] > long_ema.loc[start_check_date:end_check_date])
+        if end_check_date > short_ema.index[-1]:
+            return False
 
-    return sustained
+        sustained = all(short_ema.loc[start_check_date:end_check_date] > long_ema.loc[start_check_date:end_check_date])
+
+        return sustained
+    except:
+        return None
 
 def golden_cross(short_ema, long_ema, period=5):
     """
@@ -183,9 +187,9 @@ data = fetch_nasdaq_stocks()
 tickers = process_tickers(data)
 
 for ticker in tickers:
-    with concurrent.futures.ThreadPoolExecutor(max_workers=250) as executor:
-        future = executor.submit(calc_ema(ticker))
-    # calc_ema("dhcnl")
+    # with concurrent.futures.ThreadPoolExecutor(max_workers=250) as executor:
+    #     future = executor.submit(calc_ema(ticker))
+    calc_ema("svco")
 
 
 
