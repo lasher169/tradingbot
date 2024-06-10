@@ -4,8 +4,7 @@ import yfinance as yf
 import requests
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-import os
-from contextlib import redirect_stdout
+import pandas as pd
 
 tickers = []  # Add your list of tickers
 
@@ -62,6 +61,50 @@ def get_stock_data(ticker):
         return None
     return df
 
+# Function to check the latest crossover direction
+def latest_crossover_direction(short_ema, long_ema, sustain_period=5):
+    """
+    Determine if the latest crossover is an upward trend (Golden Cross).
+
+    Parameters:
+        short_ema (pd.Series): Short-term Exponential Moving Average (EMA).
+        long_ema (pd.Series): Long-term Exponential Moving Average (EMA).
+
+    Returns:
+        bool: True if the latest crossover is an upward trend, False otherwise.
+    """
+    # Identify crossover points
+    golden_cross = (short_ema > long_ema) & (short_ema.shift(1) <= long_ema.shift(1))
+    death_cross = (short_ema < long_ema) & (short_ema.shift(1) >= long_ema.shift(1))
+
+    # Combine crossover points
+    crossover_points = golden_cross | death_cross
+
+    # Filter out rows where crossovers occur
+    crossover_dates = crossover_points[crossover_points].index
+
+    # If there are no crossovers, return False
+    if len(crossover_dates) == 0:
+        return False
+
+    # Get the latest crossover date
+    latest_crossover_date = crossover_dates[-1]
+
+    # Check if the latest crossover is a Golden Cross
+    if not golden_cross[latest_crossover_date]:
+        return False
+
+    # Ensure the short EMA has been above the long EMA for at least `sustain_period` days
+    start_check_date = latest_crossover_date + pd.Timedelta(days=1)
+    end_check_date = start_check_date + pd.Timedelta(days=sustain_period - 1)
+
+    if end_check_date > short_ema.index[-1]:
+        return False
+
+    sustained = all(short_ema.loc[start_check_date:end_check_date] > long_ema.loc[start_check_date:end_check_date])
+
+    return sustained
+
 def golden_cross(short_ema, long_ema, period=5):
     """
     Determine if a Golden Cross (short EMA crosses above long EMA) occurs.
@@ -98,7 +141,7 @@ def calc_ema(ticker):
         #     print("adding ",ticker)
         #     upward_trending_stocks.append(ticker)
 
-        trend_result = golden_cross(df['EMA_5'], df['EMA_30'])
+        trend_result = latest_crossover_direction(df['EMA_5'], df['EMA_30'], 10)
         if  trend_result is not None and trend_result:
             print("adding ",ticker)
             upward_trending_stocks.append(ticker)
@@ -108,9 +151,9 @@ def calc_ema(ticker):
             import matplotlib.pyplot as plt
 
 
-            plt.figure(figsize=(28, 7))
-            # plt.plot(df['Close'], label='Close Price', color='black')
-            plt.plot(df['EMA_5'], label='5-day EMA', color='#D1FFBD')
+            plt.figure(figsize=(40, 7))
+            plt.plot(df['Close'], label='Close Price', color='black')
+            plt.plot(df['EMA_5'], label='5-day EMA', color='green')
             plt.plot(df['EMA_30'], label='30-day EMA', color='red')
             plt.xlabel('Date')
             plt.ylabel('Price')
@@ -125,8 +168,9 @@ def calc_ema(ticker):
             plt.legend()
             plt.title('EMA Crossover Strategy with OBV '+ticker)
             print("plotting ",ticker)
-            plt.show(block=False)
+            plt.ion()
             plt.show()
+            plt.pause(0.001)
 
         print("completed", ticker)
     else:
