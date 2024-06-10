@@ -187,9 +187,9 @@ data = fetch_nasdaq_stocks()
 tickers = process_tickers(data)
 
 for ticker in tickers:
-    # with concurrent.futures.ThreadPoolExecutor(max_workers=250) as executor:
-    #     future = executor.submit(calc_ema(ticker))
-    calc_ema("svco")
+    with concurrent.futures.ThreadPoolExecutor(max_workers=250) as executor:
+        future = executor.submit(calc_ema(ticker))
+    # calc_ema("svco")
 
 
 
